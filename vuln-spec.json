@@ -1,0 +1,10 @@
+{
+  "openapi": "3.0.0",
+  "info": { "title": "Vulnerable API", "version": "1.0.0" },
+  "servers": [{ "url": "http://localhost:3001" }],
+  "paths": {
+    "/api/users/1": { "get": { "summary": "User 1" } },
+    "/api/users/2": { "get": { "summary": "User 2" } },
+    "/api/admin/users": { "get": { "summary": "Admin users" } }
+  }
+}

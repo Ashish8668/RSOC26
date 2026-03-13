@@ -374,3 +374,126 @@ Additional behavior check:
 7. Close with standards mapping and remediation workflow
 
 This gives a complete “problem -> detection -> proof -> fix validation” story.
+
+---
+
+## 15) Deep Technical Flow (Exactly How Detection Works)
+
+This section answers viva/demo questions like:
+- "Kya scanner packets sniff karta hai?"
+- "Input dene ke baad exactly backend kya karta hai?"
+- "Issue detect hone tak internal logic flow kya hai?"
+
+## 15.1 Packet Sniffing vs Active Testing
+- APIGuard **packet sniffer** nahi hai (no pcap / no wireshark-style capture).
+- APIGuard **active HTTP security testing** karta hai.
+- Scanner khud crafted HTTP requests bhejta hai, phir responses inspect karta hai.
+
+So technically: application-layer DAST-style probing, not network packet interception.
+
+## 15.2 Request Engine Internals
+Scanner backend me centralized HTTP client (`axios`) configure hota hai:
+- timeout (`SCAN_TIMEOUT_MS`)
+- default user-agent
+- optional bearer token (if user provided)
+- optional custom headers
+- `validateStatus: () => true`
+
+`validateStatus` intentionally always true hai so that:
+- `401`, `403`, `429`, `500` responses bhi security signals ke roop me process ho sake.
+
+## 15.3 End-to-End Runtime Pipeline
+1. Client `/api/scan/start` call karta hai (URL/spec/curl input ke saath)
+2. Parser input ko normalized endpoint objects me convert karta hai
+3. Engine endpoints discover count + activity feed update karta hai
+4. Detection modules sequentially run hote hain
+5. Har module targeted probe requests execute karta hai
+6. Responses expected secure behavior se compare hoti hain
+7. Finding object generate hota hai (evidence + replay + remediation)
+8. Engine finding normalize karta hai (severity, CVSS score/vector, confidence)
+9. Optional Groq remediation enrichment hota hai
+10. Finding persist hoti hai (Firebase Admin or memory mode)
+11. UI polling ke through live list/update show hota hai
+12. Report APIs executive summary + detailed output build karte hain
+
+## 15.4 Parser Logic by Input Type
+
+### A) Base URL
+- Known/common paths probe kiye jaate hain
+- Non-404 usable endpoints endpoint list me add hote hain
+
+### B) OpenAPI JSON/YAML
+- `paths` + methods parse hote hain
+- server/base URL combine karke full endpoint inventory banti hai
+
+### C) Postman Collection
+- nested items recursively parse hote hain
+- request method, URL, raw body extract hota hai
+
+### D) Raw curl
+- curl lines tokenize hoti hain
+- method (`-X`), URL, headers (`-H`), body (`-d`) extract hota hai
+- normalized endpoint records create hote hain
+
+## 15.5 Detection Logic (Concrete Request Behavior)
+
+### Module A: BOLA
+- baseline object request send
+- same auth ke saath tampered ID requests send
+- response bodies compare
+- if unauthorized different object data returns -> BOLA finding
+
+### Module B: Auth/JWT
+- no token request
+- malformed token request
+- `alg:none` forged token request
+- confusion-style token request
+- if protected endpoint still allows access -> auth/JWT finding
+
+### Module C: Rate Limiting
+- 50-100 rapid requests burst
+- login endpoints priority
+- accepted vs blocked ratio, throttle start index, measured RPS compute
+- no throttle signal -> rate-limit finding
+
+### Module D: Data Exposure
+- response bodies regex scan for PII/secrets
+- over-return check (`fields=id` style probe vs returned keys)
+- sensitive pattern or excessive fields -> data exposure finding
+
+### Module E: Injection/Misconfig
+- SQLi payload probes and error signature detection
+- SSRF internal URL payload probes
+- CORS origin reflection probe (`Origin: evil.com`)
+- security header presence check
+- exploit/misconfig signal -> finding
+
+## 15.6 Decision Model (How scanner decides vulnerable vs safe)
+APIGuard combines:
+- status-code semantics (`200` where `401/403` expected)
+- differential behavior (baseline vs tampered)
+- content signatures (error traces, secret/PII patterns)
+- header policy validation
+
+This hybrid model reduces blind pattern-only false positives.
+
+## 15.7 Finding Enrichment Flow (After detection)
+When module detects issue:
+1. raw finding created
+2. engine adds:
+- normalized severity
+- CVSS score + vector
+- confidence
+- remediation fallback
+3. AI remediation attempt (Groq)
+4. one-line remediation extract
+5. finding persisted + streamed to dashboard
+
+## 15.8 Why vulnerable-api vs safe-api comparison is important
+- Vulnerable target proves exploit detection capability.
+- Safe target proves control validation (not random flagging).
+- Demo shows both:
+- detection sensitivity
+- validation specificity
+
+This is a strong engineering proof that scanner is practical, explainable, and fix-oriented.
