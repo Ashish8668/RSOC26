@@ -57,6 +57,8 @@ Runs on http://localhost:3000
 5. Server .env: Project Settings → Service Accounts → Generate New Private Key
 
 > Without Firebase the scanner works in in-memory mode — fine for demo!
+> If server `.env` only has web keys (`FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, etc.), scanner still runs in-memory mode.
+> For persistent scan history in Firestore from backend, use Admin SDK fields: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`.
 
 ---
 

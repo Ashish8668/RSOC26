@@ -2,6 +2,19 @@ const express = require('express');
 const router = express.Router();
 const db = require('../firebase-admin');
 
+router.get('/:scanId/html', async (req, res) => {
+  try {
+    const scan = await db.getScan(req.params.scanId);
+    if (!scan) return res.status(404).send('Scan not found');
+    const findings = await db.getFindings(req.params.scanId);
+    const html = buildSimpleHtmlReport(scan, findings);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
 router.get('/:scanId', async (req, res) => {
   try {
     const scan = await db.getScan(req.params.scanId);
@@ -34,6 +47,12 @@ router.get('/:scanId', async (req, res) => {
     if (types.includes('INJECTION')) recommendations.push({ title: 'Use Parameterized Queries', description: 'Never concatenate user input into SQL. Use prepared statements: db.query("SELECT * WHERE id = ?", [id])', priority: 'critical' });
     if (types.includes('CORS')) recommendations.push({ title: 'Fix CORS Policy', description: "Replace wildcard (*) with explicit origins: cors({ origin: ['https://yourdomain.com'] })", priority: 'medium' });
 
+    const confidence = findings.reduce((acc, f) => {
+      const key = f.confidence || 'Possible';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, { Confirmed: 0, Likely: 0, Possible: 0 });
+
     res.json({
       meta: { reportId: req.params.scanId, generatedAt: new Date().toISOString(), target: scan.targetUrl, scanType: scan.scanType },
       executive_summary: {
@@ -44,8 +63,14 @@ router.get('/:scanId', async (req, res) => {
         low: findings.filter(f => f.severity === 'low').length,
         info: findings.filter(f => f.severity === 'info').length,
         endpoints_tested: scan.scannedEndpoints || 0,
+        confidence,
       },
-      findings: findings.map(f => ({ ...f, owasp_category: owaspMap[f.type] || 'API8:2023' })),
+      findings: findings.map(f => ({
+        ...f,
+        confidence: f.confidence || 'Possible',
+        remediation_one_liner: f.remediation_one_liner || (String(f.aiRemediation || f.remediation || '').split('\n').find(Boolean) || ''),
+        owasp_category: owaspMap[f.type] || 'API8:2023'
+      })),
       recommendations,
       scan_info: scan
     });
@@ -53,3 +78,71 @@ router.get('/:scanId', async (req, res) => {
 });
 
 module.exports = router;
+
+function buildSimpleHtmlReport(scan, findings) {
+  const summary = findings.reduce((acc, f) => {
+    acc[f.severity] = (acc[f.severity] || 0) + 1;
+    return acc;
+  }, { critical: 0, high: 0, medium: 0, low: 0, info: 0 });
+
+  const findingRows = findings.map((f, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${escapeHtml(f.severity || '')}</td>
+      <td>${escapeHtml(f.type || '')}</td>
+      <td>${escapeHtml(f.method || '')}</td>
+      <td>${escapeHtml(f.endpoint || '')}</td>
+      <td>${escapeHtml(String(f.cvss_score || ''))}</td>
+      <td>${escapeHtml(f.confidence || 'Possible')}</td>
+      <td>${escapeHtml((f.remediation_one_liner || f.remediation || '').slice(0, 160))}</td>
+    </tr>
+  `).join('\n');
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>API Security Report ${escapeHtml(scan.scanId || '')}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #111; }
+    h1 { margin-bottom: 4px; }
+    .meta { color: #555; margin-bottom: 20px; }
+    .summary { display: flex; gap: 12px; margin-bottom: 16px; }
+    .card { border: 1px solid #ddd; padding: 8px 12px; border-radius: 6px; min-width: 80px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border: 1px solid #ddd; padding: 6px; vertical-align: top; }
+    th { background: #f5f5f5; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>API Security Report</h1>
+  <div class="meta">Target: ${escapeHtml(scan.targetUrl || '')} | Scan: ${escapeHtml(scan.scanType || 'standard')} | Generated: ${new Date().toISOString()}</div>
+  <div class="summary">
+    <div class="card">Critical: ${summary.critical || 0}</div>
+    <div class="card">High: ${summary.high || 0}</div>
+    <div class="card">Medium: ${summary.medium || 0}</div>
+    <div class="card">Low: ${summary.low || 0}</div>
+    <div class="card">Info: ${summary.info || 0}</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>Severity</th><th>Type</th><th>Method</th><th>Endpoint</th><th>CVSS</th><th>Confidence</th><th>One-line Remediation</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${findingRows}
+    </tbody>
+  </table>
+</body>
+</html>`;
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}

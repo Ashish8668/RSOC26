@@ -22,18 +22,20 @@ export default function Home() {
   const [token, setToken] = useState('');
   const [scanType, setScanType] = useState('standard');
   const [file, setFile] = useState(null);
+  const [rawCurl, setRawCurl] = useState('');
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState('url');
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!url && !file) return toast.error('Enter a target URL or upload a spec file');
+    if (!url && !file && !rawCurl.trim()) return toast.error('Enter a target URL, upload a spec file, or paste curl commands');
     setLoading(true);
     const tid = toast.loading('Starting scan...');
     try {
       const fd = new FormData();
       if (url)   fd.append('targetUrl', url);
       if (token) fd.append('authToken', token);
+      if (rawCurl.trim()) fd.append('rawCurl', rawCurl.trim());
       fd.append('scanType', scanType);
       if (file)  fd.append('file', file);
       const { data } = await axios.post(`${API_URL}/api/scan/start`, fd, { headers: {'Content-Type':'multipart/form-data'} });
@@ -63,7 +65,7 @@ export default function Home() {
       {/* Form */}
       <div style={{background:'var(--bg-2)',border:'1px solid var(--border)',borderRadius:16,padding:32,marginBottom:28,animation:'fadeInUp 0.5s ease 0.1s both'}}>
         <div style={{display:'flex',gap:8,marginBottom:24}}>
-          {[{id:'url',label:'🌐 Target URL'},{id:'file',label:'📁 Upload Spec'}].map(t=>(
+          {[{id:'url',label:'🌐 Target URL'},{id:'file',label:'📁 Upload Spec'},{id:'curl',label:'🧵 Raw curl'}].map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{padding:'7px 18px',borderRadius:8,border:'1px solid',cursor:'pointer',fontSize:13,fontWeight:500,fontFamily:'var(--font-body)',
               borderColor:tab===t.id?'rgba(79,142,247,0.5)':'var(--border)',background:tab===t.id?'rgba(79,142,247,0.1)':'transparent',color:tab===t.id?'#4f8ef7':'#8b9bb8'}}>{t.label}</button>
           ))}
@@ -85,6 +87,20 @@ export default function Home() {
                 <div style={{color:file?'#4f8ef7':'#8b9bb8',fontSize:13}}>{file?file.name:'Click to upload Postman .json or OpenAPI .yaml'}</div>
               </div>
               <input ref={fileRef} type="file" accept=".json,.yaml,.yml" style={{display:'none'}} onChange={e=>setFile(e.target.files[0])}/>
+            </div>
+          )}
+          {tab==='curl' && (
+            <div style={{marginBottom:16}}>
+              <label style={{display:'block',fontSize:13,color:'#8b9bb8',marginBottom:6,fontWeight:500}}>Paste raw curl command(s)</label>
+              <textarea
+                value={rawCurl}
+                onChange={e=>setRawCurl(e.target.value)}
+                placeholder={`curl -X GET http://localhost:3001/api/users/1\ncurl -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" -d '{"email":"alice@example.com","password":"password123"}'`}
+                rows={7}
+                style={{width:'100%',padding:'11px 14px',background:'var(--bg-3)',border:'1px solid var(--border)',borderRadius:9,color:'var(--text-primary)',fontSize:13,fontFamily:'var(--font-mono)',outline:'none',resize:'vertical'}}
+                onFocus={e=>e.target.style.borderColor='#4f8ef7'} onBlur={e=>e.target.style.borderColor='#2a3347'}
+              />
+              <p style={{fontSize:12,color:'#4a5568',marginTop:5}}>You can paste multiple curl commands on separate lines.</p>
             </div>
           )}
           <div style={{marginBottom:20}}>

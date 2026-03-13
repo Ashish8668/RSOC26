@@ -23,6 +23,7 @@ export default function Report() {
     <div style={{maxWidth:960,margin:'0 auto',padding:'28px 20px'}}>
       <div style={{display:'flex',gap:10,marginBottom:28}}>
         <button onClick={()=>navigate(`/scan/${scanId}`)} style={{padding:'7px 14px',background:'transparent',border:'1px solid #2a3347',borderRadius:7,color:'#8b9bb8',cursor:'pointer',fontSize:13,fontFamily:'var(--font-body)'}}>← Dashboard</button>
+        <a href={`${API_URL}/api/report/${scanId}/html`} target="_blank" rel="noreferrer" style={{padding:'7px 14px',background:'transparent',border:'1px solid #2a3347',borderRadius:7,color:'#8b9bb8',cursor:'pointer',fontSize:13,fontFamily:'var(--font-body)',textDecoration:'none'}}>Download HTML</a>
         <button onClick={()=>window.print()} style={{padding:'7px 18px',background:'#4f8ef7',border:'none',borderRadius:7,color:'white',cursor:'pointer',fontSize:13,fontFamily:'var(--font-body)',fontWeight:600}}>🖨️ Print / Save PDF</button>
       </div>
 
@@ -89,6 +90,7 @@ export default function Report() {
             <div key={i} style={{background:'var(--bg-3)',borderRadius:9,padding:14,borderLeft:`3px solid ${SC[f.severity]||'#8b9bb8'}`}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:7}}>
                 <div><div style={{display:'flex',alignItems:'center',gap:7,marginBottom:3}}><span className={`badge badge-${f.severity}`}>{f.severity}</span><span style={{fontSize:10,color:'#4a5568'}}>CVSS {f.cvss_score}</span></div>
+                  <div style={{fontSize:10,color:'#4a5568',marginBottom:3}}>Confidence: {f.confidence || 'Possible'}</div>
                   <h3 style={{fontSize:14,fontWeight:600,color:'#e8edf5'}}>{f.title}</h3></div>
                 <div style={{fontSize:10,color:'#4a5568',fontFamily:'var(--font-mono)',textAlign:'right'}}><div style={{color:'#4f8ef7'}}>{f.method}</div><div>{(f.endpoint||'').replace(/^https?:\/\/[^/]+/,'').slice(0,35)}</div></div>
               </div>

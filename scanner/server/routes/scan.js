@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
+const yaml = require('js-yaml');
 const db = require('../firebase-admin');
 const ScanEngine = require('../scanner/engine');
 
@@ -10,8 +11,8 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 router.post('/start', upload.single('file'), async (req, res) => {
   try {
     const scanId = uuidv4();
-    const { targetUrl, scanType = 'standard', authToken, customHeaders } = req.body;
-    let inputData = { targetUrl, scanType, authToken };
+    const { targetUrl, rawCurl, scanType = 'standard', authToken, customHeaders } = req.body;
+    let inputData = { targetUrl, rawCurl, scanType, authToken };
 
     if (customHeaders) {
       try { inputData.customHeaders = JSON.parse(customHeaders); } catch (e) { inputData.customHeaders = {}; }
@@ -23,15 +24,24 @@ router.post('/start', upload.single('file'), async (req, res) => {
         inputData.fileType = 'json';
         if (inputData.fileContent.info && inputData.fileContent.item) inputData.fileType = 'postman';
         else if (inputData.fileContent.openapi || inputData.fileContent.swagger) inputData.fileType = 'openapi';
-      } catch (e) { inputData.fileContent = content; inputData.fileType = 'openapi-yaml'; }
+      } catch (e) {
+        try {
+          inputData.fileContent = yaml.load(content);
+          inputData.fileType = 'openapi-yaml';
+        } catch {
+          inputData.fileContent = content;
+          inputData.fileType = 'unknown';
+        }
+      }
     }
 
-    if (!targetUrl && !req.file) return res.status(400).json({ error: 'Provide targetUrl or spec file' });
+    if (!targetUrl && !req.file && !rawCurl) return res.status(400).json({ error: 'Provide targetUrl, spec file, or raw curl commands' });
 
     await db.createScan(scanId, {
       scanId, targetUrl: targetUrl || 'From file', scanType,
       status: 'running', progress: 0, totalEndpoints: 0, scannedEndpoints: 0,
       createdAt: new Date().toISOString(),
+      activity: [],
       summary: { critical: 0, high: 0, medium: 0, low: 0, info: 0 }
     });
 

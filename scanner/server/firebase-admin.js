@@ -2,16 +2,39 @@ require('dotenv').config();
 const admin = require('firebase-admin');
 
 let db = null;
+let storageMode = 'memory';
 const memStore = { scans: {}, findings: {} };
 
 function initFirebase() {
   if (admin.apps.length > 0) return;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY
-    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined;
-  if (!process.env.FIREBASE_PROJECT_ID || !privateKey) {
-    console.warn('⚠️  Firebase not configured — running in memory mode');
+
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined;
+  const hasAdminConfig = Boolean(
+    process.env.FIREBASE_PROJECT_ID &&
+    process.env.FIREBASE_CLIENT_EMAIL &&
+    privateKey &&
+    /BEGIN PRIVATE KEY/.test(privateKey)
+  );
+
+  const hasWebConfig = Boolean(
+    process.env.FIREBASE_API_KEY &&
+    process.env.FIREBASE_AUTH_DOMAIN &&
+    process.env.FIREBASE_PROJECT_ID &&
+    process.env.FIREBASE_STORAGE_BUCKET &&
+    process.env.FIREBASE_MESSAGING_SENDER_ID &&
+    process.env.FIREBASE_APP_ID
+  );
+
+  if (!hasAdminConfig) {
+    storageMode = 'memory';
+    if (hasWebConfig) {
+      console.warn('Firebase web config detected. Server persistence still needs Admin SDK credentials. Running in memory mode.');
+    } else {
+      console.warn('Firebase Admin credentials not configured. Running in memory mode.');
+    }
     return;
   }
+
   try {
     admin.initializeApp({
       credential: admin.credential.cert({
@@ -21,8 +44,10 @@ function initFirebase() {
       }),
     });
     db = admin.firestore();
-    console.log('✅ Firebase Admin initialized');
+    storageMode = 'firebase-admin';
+    console.log('Firebase Admin initialized');
   } catch (err) {
+    storageMode = 'memory';
     console.error('Firebase init error:', err.message);
   }
 }
@@ -68,5 +93,8 @@ module.exports = {
       return snap.docs.map(d => ({ id: d.id, ...d.data() }));
     }
     return Object.entries(memStore.scans).map(([id, data]) => ({ id, ...data })).reverse();
-  }
+  },
+  getStorageMode() {
+    return storageMode;
+  },
 };
