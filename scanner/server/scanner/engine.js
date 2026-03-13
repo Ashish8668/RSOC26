@@ -160,6 +160,7 @@ class ScanEngine {
       ...finding,
       severity,
       cvss_score: Math.max(0, Math.min(10, Number(cvssScore.toFixed(1)))),
+      cvss_vector: finding.cvss_vector || this.inferCvssVector(finding, severity),
       confidence: finding.confidence || this.inferConfidence(finding),
       remediation: finding.remediation || 'Apply least privilege, strict validation, and secure defaults for this endpoint.',
       foundAt: new Date().toISOString(),
@@ -176,6 +177,30 @@ class ScanEngine {
   cvssFromSeverity(severity) {
     const map = { critical: 9.5, high: 7.8, medium: 5.3, low: 3.1, info: 0.0 };
     return map[severity] ?? 5.0;
+  }
+
+  inferCvssVector(finding, severity) {
+    const type = (finding.type || '').toUpperCase();
+    const byType = {
+      BOLA: 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L',
+      AUTH_BYPASS: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:L',
+      JWT: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N',
+      RATE_LIMIT: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H',
+      DATA_EXPOSURE: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N',
+      INJECTION: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H',
+      MISCONFIG: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N',
+      CORS: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N',
+    };
+    if (byType[type]) return byType[type];
+
+    const bySeverity = {
+      critical: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H',
+      high: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:L',
+      medium: 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:L',
+      low: 'CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N',
+      info: 'CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N',
+    };
+    return bySeverity[severity] || bySeverity.medium;
   }
 
   oneLineFix(text) {

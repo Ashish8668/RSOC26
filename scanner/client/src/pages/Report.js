@@ -91,6 +91,7 @@ export default function Report() {
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:7}}>
                 <div><div style={{display:'flex',alignItems:'center',gap:7,marginBottom:3}}><span className={`badge badge-${f.severity}`}>{f.severity}</span><span style={{fontSize:10,color:'#4a5568'}}>CVSS {f.cvss_score}</span></div>
                   <div style={{fontSize:10,color:'#4a5568',marginBottom:3}}>Confidence: {f.confidence || 'Possible'}</div>
+                  <div style={{fontSize:10,color:'#4a5568',marginBottom:3,fontFamily:'var(--font-mono)',wordBreak:'break-all'}}>Vector: {f.cvss_vector || 'N/A'}</div>
                   <h3 style={{fontSize:14,fontWeight:600,color:'#e8edf5'}}>{f.title}</h3></div>
                 <div style={{fontSize:10,color:'#4a5568',fontFamily:'var(--font-mono)',textAlign:'right'}}><div style={{color:'#4f8ef7'}}>{f.method}</div><div>{(f.endpoint||'').replace(/^https?:\/\/[^/]+/,'').slice(0,35)}</div></div>
               </div>

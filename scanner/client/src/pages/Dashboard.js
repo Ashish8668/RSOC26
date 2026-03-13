@@ -130,6 +130,9 @@ function FindingRow({finding,isSelected,onClick}){
         <div style={{fontSize:12,fontWeight:600,color:'#e8edf5',marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{finding.title}</div>
         <div style={{fontSize:10,color:'#4a5568',fontFamily:'var(--font-mono)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{finding.method} {(finding.endpoint||'').replace(/^https?:\/\/[^/]+/,'')}</div>
         <div style={{display:'flex',alignItems:'center',gap:5,marginTop:3}}><span className={`badge badge-${finding.severity}`} style={{fontSize:9}}>{finding.severity}</span><span style={{fontSize:10,color:'#4a5568'}}>CVSS {finding.cvss_score}</span><span style={{fontSize:10,color:'#4a5568'}}>{finding.confidence||'Possible'}</span></div>
+        <div style={{fontSize:9,color:'#4a5568',fontFamily:'var(--font-mono)',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+          {finding.cvss_vector || 'CVSS vector unavailable'}
+        </div>
       </div>
     </div>
   </div>;
@@ -162,6 +165,10 @@ function FindingDetail({finding}){
             <div style={{fontSize:12,fontWeight:600,color:'#e8edf5',fontFamily:'var(--font-mono)'}}>{v}</div>
           </div>
         ))}
+      </div>
+      <div style={{marginTop:10,background:'var(--bg-3)',borderRadius:7,padding:'9px 12px'}}>
+        <div style={{fontSize:10,color:'#4a5568',marginBottom:3,textTransform:'uppercase',letterSpacing:.5}}>CVSS Vector</div>
+        <div style={{fontSize:12,fontWeight:600,color:'#e8edf5',fontFamily:'var(--font-mono)',wordBreak:'break-all'}}>{finding.cvss_vector || 'Not available'}</div>
       </div>
     </div>}
     {tab==='evidence'&&<div className="card">
