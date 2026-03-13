@@ -184,6 +184,33 @@ app.get('/api/products', authenticateToken, (req, res) => {
   res.json({ products, count: products.length });
 });
 
+// Safe SSRF handling: allow only explicit trusted host.
+app.get('/api/fetch', authenticateToken, requireRole('admin'), async (req, res) => {
+  const target = String(req.query.url || '').trim();
+  if (!target) return res.status(400).json({ error: 'Provide ?url=' });
+
+  let parsed;
+  try {
+    parsed = new URL(target);
+  } catch {
+    return res.status(400).json({ error: 'Invalid URL.' });
+  }
+
+  const allowedHosts = new Set(['jsonplaceholder.typicode.com']);
+  const disallowed = isPrivateHost(parsed.hostname) || !['https:'].includes(parsed.protocol);
+  if (disallowed || !allowedHosts.has(parsed.hostname)) {
+    return res.status(400).json({ error: 'Target URL blocked by SSRF policy.' });
+  }
+
+  try {
+    const upstream = await fetch(parsed.toString(), { method: 'GET' });
+    const text = await upstream.text();
+    return res.json({ fetched_from: parsed.toString(), preview: text.slice(0, 200) });
+  } catch {
+    return res.status(502).json({ error: 'Upstream fetch failed.' });
+  }
+});
+
 app.use((err, _req, res, _next) => {
   if (err && /CORS/i.test(err.message || '')) {
     return res.status(403).json({ error: 'CORS blocked for this origin.' });
@@ -245,4 +272,14 @@ function seedIfNeeded() {
 
 function hash(value) {
   return bcrypt.hashSync(value, 10);
+}
+
+function isPrivateHost(host) {
+  const lower = String(host || '').toLowerCase();
+  if (['localhost', '127.0.0.1', '::1'].includes(lower)) return true;
+  if (/^10\./.test(lower)) return true;
+  if (/^192\.168\./.test(lower)) return true;
+  if (/^169\.254\./.test(lower)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(lower)) return true;
+  return false;
 }
