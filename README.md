@@ -10,7 +10,8 @@ RSOC26/
 ├── scanner/
 │   ├── server/          ← Express backend (runs locally on :5000)
 │   └── client/          ← React frontend (runs on :3000)
-└── vulnerable-api/      ← Demo target with intentional bugs (:3001)
+├── vulnerable-api/      ← Demo target with intentional bugs (:3001)
+└── safe-api/            ← Hardened API target for comparison (:3002)
 ```
 
 ---
@@ -28,6 +29,15 @@ npm install
 node index.js
 ```
 Runs on http://localhost:3001  ⚠️ Intentionally insecure!
+
+### Step 2B — Start Safe Demo API (optional)
+```bash
+cd RSOC26/safe-api
+npm install
+copy .env.template .env
+node index.js
+```
+Runs on http://localhost:3002  ✅ Hardened implementation
 
 ### Step 3 — Start Scanner Backend
 ```bash
